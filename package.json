@@ -1,0 +1,18 @@
+{
+  "name": "amora",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/main.jsx --bundle --outfile=docs/bundle.js --loader:.js=jsx --jsx=automatic --format=iife --target=es2019 --minify",
+    "watch": "esbuild src/main.jsx --bundle --outfile=docs/bundle.js --loader:.js=jsx --jsx=automatic --format=iife --target=es2019 --watch"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.383.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0"
+  }
+}
