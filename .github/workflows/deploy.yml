@@ -1,4 +1,4 @@
-name: Build and deploy
+[15/07/2026 02:09] Jahongir Akam: name: Build and deploy
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
           git add docs
           git diff --staged --quiet || git commit -m "Auto-build: yangilangan sayt"
           git push
-          name: Build and deploy
+[15/07/2026 02:37] Jahongir Akam: name: Build and deploy
 
 on:
   push:
@@ -38,6 +38,7 @@ on:
 
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -61,7 +62,8 @@ jobs:
           git add docs
           git diff --staged --quiet || git commit -m "Auto-build: yangilangan sayt"
           git push
-          "name": "Build and deploy",
+[15/07/2026 02:46] Jahongir Akam: {
+  "name": "Build and deploy",
   "on": { "push": { "branches": ["main"] } },
   "permissions": { "contents": "write" },
   "jobs": {
@@ -73,7 +75,12 @@ jobs:
         { "name": "Install dependencies", "run": "rm -rf node_modules && npm install" },
         { "name": "Build", "run": "npm run build" },
         { "name": "Commit built files", "run": "git config user.name github-actions && git config user.email actions@github.com && git add docs && (git diff --staged --quiet || git commit -m 'Auto-build: yangilangan sayt') && git push" }
-name: Build and deploy
+      ]
+    }
+  }
+}
+[15/07/2026 02:51] Jahongir Akam: name: Build and deploy
+
 on:
   push:
     branches: [main]
@@ -104,3 +111,4 @@ jobs:
           git add docs
           git commit -m "Auto-build: yangilangan sayt" --allow-empty
           git push
+[15/07/2026 03:04] Jahongir Akam: 
