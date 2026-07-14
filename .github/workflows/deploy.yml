@@ -30,7 +30,7 @@ jobs:
           git add docs
           git diff --staged --quiet || git commit -m "Auto-build: yangilangan sayt"
           git push
-[15/07/2026 02:37] Jahongir Akam: name: Build and deploy
+          name: Build and deploy
 
 on:
   push:
