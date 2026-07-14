@@ -1,4 +1,4 @@
-[15/07/2026 02:09] Jahongir Akam: name: Build and deploy
+name: Build and deploy
 
 on:
   push:
