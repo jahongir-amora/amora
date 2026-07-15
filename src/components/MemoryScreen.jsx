@@ -1,10 +1,12 @@
 import React from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { TopBar } from "./TopBar.jsx";
 
-export function MemoryScreen({ notes, noteInput, setNoteInput, onAdd, onRemove }) {
+export function MemoryScreen({ onOpenMenu, notes, noteInput, setNoteInput, onAdd, onRemove }) {
   return (
-    <div className="flex flex-col flex-1 min-h-0 px-6 pt-14 pb-4">
-      <h2 className="amora-display text-2xl mb-2" style={{ color: "var(--text)" }}>Xotira</h2>
+    <div className="flex flex-col flex-1 min-h-0">
+      <TopBar title="Xotira" onOpenMenu={onOpenMenu} />
+      <div className="flex flex-col flex-1 min-h-0 px-6 pt-5 pb-4">
       <p className="text-sm mb-5" style={{ color: "var(--muted)" }}>Amora shu narsalarni eslab, suhbatda hisobga oladi. Xohlagan yozuvni o'chirishingiz mumkin.</p>
       <div className="flex gap-2 mb-5">
         <input value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onAdd()} placeholder="Masalan: har kuni 22:00 da uxlayman"
@@ -21,6 +23,7 @@ export function MemoryScreen({ notes, noteInput, setNoteInput, onAdd, onRemove }
             <button onClick={() => onRemove(i)}><Trash2 size={16} color="var(--muted)" /></button>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

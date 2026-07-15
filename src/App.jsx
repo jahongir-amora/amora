@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 
 import { FONT_IMPORT } from "./constants/fonts.js";
 import { THEMES, WEATHER_COLORS } from "./constants/themes.js";
-import { CHARACTERS } from "./constants/characters.js";
+import { PERSONA } from "./constants/persona.js";
+import { QIDIRUV_SYSTEM } from "./constants/qidiruv.js";
 import { SAFETY_RULE } from "./constants/safety.js";
 
 import { buildApiMessages, fetchClaudeReply } from "./utils/api.js";
@@ -11,21 +12,29 @@ import { isEmojiOnly, pickEmojiReply } from "./utils/text.js";
 import { LockScreen } from "./components/LockScreen.jsx";
 import { Onboarding } from "./components/Onboarding.jsx";
 import { NameScreen } from "./components/NameScreen.jsx";
-import { CharacterSelect } from "./components/CharacterSelect.jsx";
 import { CallScreen } from "./components/CallScreen.jsx";
 import { ChatScreen } from "./components/ChatScreen.jsx";
+import { QidiruvScreen } from "./components/QidiruvScreen.jsx";
 import { MemoryScreen } from "./components/MemoryScreen.jsx";
 import { SettingsScreen } from "./components/SettingsScreen.jsx";
-import { BottomNav } from "./components/BottomNav.jsx";
+import { FamilyScreen } from "./components/FamilyScreen.jsx";
+import { SosScreen } from "./components/SosScreen.jsx";
+import { SideMenu } from "./components/SideMenu.jsx";
 
 export default function App() {
   const [screen, setScreen] = useState("onboarding");
   const [onboardStep, setOnboardStep] = useState(0);
   const [userName, setUserName] = useState("");
-  const [character, setCharacter] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [searchMessages, setSearchMessages] = useState([]);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+
   const [notes, setNotes] = useState([]);
   const [noteInput, setNoteInput] = useState("");
   const [dailyCheckin, setDailyCheckin] = useState(true);
@@ -35,9 +44,8 @@ export default function App() {
   const [showStickers, setShowStickers] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
-  const [showEncyForm, setShowEncyForm] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [aiMood, setAiMood] = useState("😊");
+  const [aiMood, setAiMood] = useState(PERSONA.mood);
   const [reactionPickerFor, setReactionPickerFor] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [recording, setRecording] = useState(false);
@@ -46,8 +54,6 @@ export default function App() {
   const [callTranscript, setCallTranscript] = useState("");
   const [callReply, setCallReply] = useState("");
   const [familyMembers, setFamilyMembers] = useState([]);
-  const [showSosConfirm, setShowSosConfirm] = useState(false);
-  const [sosLog, setSosLog] = useState(null);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [pinCode, setPinCode] = useState("");
   const [locked, setLocked] = useState(false);
@@ -57,6 +63,7 @@ export default function App() {
   const callAudioCtxRef = useRef(null);
   const callAnalyserRef = useRef(null);
   const callRafRef = useRef(null);
+  const recordTargetRef = useRef("chat");
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -83,6 +90,7 @@ export default function App() {
   }, []);
 
   const scrollRef = useRef(null);
+  const searchScrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -99,8 +107,8 @@ export default function App() {
   }, [messages, loading]);
 
   useEffect(() => {
-    if (character) setAiMood(character.mood);
-  }, [character]);
+    if (searchScrollRef.current) searchScrollRef.current.scrollTop = searchScrollRef.current.scrollHeight;
+  }, [searchMessages, searchLoading]);
 
   function speak(text, onEnd) {
     if (!text) { if (onEnd) onEnd(); return; }
@@ -122,7 +130,7 @@ export default function App() {
     const t = (text || "").toLowerCase();
     if (/yomon|charchad|qiyin|g'amgin|xafa|stress|qattiq/.test(t)) setAiMood("🤗");
     else if (/zor|ajoyib|xursand|rahmat|yaxshi|super/.test(t)) setAiMood("🎉");
-    else setAiMood(character ? character.mood : "😊");
+    else setAiMood(PERSONA.mood);
   }
 
   function maybeAutoReact(text, index) {
@@ -136,35 +144,41 @@ export default function App() {
     }, 700);
   }
 
-  async function sendTurn(userMessageObj, textForAPI, opts = {}) {
-    const newMessages = [...messages, userMessageObj];
-    const userIndex = newMessages.length - 1;
-    setMessages(newMessages);
-    setLoading(true);
-    updateMood(textForAPI);
+  // Generic assistant turn runner used by both the Suhbat (chat) and Qidiruv (search) threads.
+  async function runTurn(thread, userMessageObj, textForAPI, opts = {}) {
+    const isChat = thread === "chat";
+    const currentMessages = isChat ? messages : searchMessages;
+    const setThreadMessages = isChat ? setMessages : setSearchMessages;
+    const setThreadLoading = isChat ? setLoading : setSearchLoading;
 
-    if (isEmojiOnly(textForAPI) && !opts.voiceTurn) {
+    const newMessages = [...currentMessages, userMessageObj];
+    const userIndex = newMessages.length - 1;
+    setThreadMessages(newMessages);
+    setThreadLoading(true);
+    if (isChat) updateMood(textForAPI);
+
+    if (isChat && isEmojiOnly(textForAPI) && !opts.voiceTurn) {
       setTimeout(() => {
-        setMessages((prev) => prev.map((m, i) => (i === userIndex ? { ...m, reaction: pickEmojiReply(textForAPI) } : m)));
-        setLoading(false);
+        setThreadMessages((prev) => prev.map((m, i) => (i === userIndex ? { ...m, reaction: pickEmojiReply(textForAPI) } : m)));
+        setThreadLoading(false);
       }, 350);
       return;
     }
 
-    maybeAutoReact(textForAPI, userIndex);
+    if (isChat) maybeAutoReact(textForAPI, userIndex);
 
-    const memoryContext = notes.length > 0 ? `Foydalanuvchi haqida eslab qolgan narsalar: ${notes.join("; ")}.` : "";
-    const system = `${character.system}\n\n${SAFETY_RULE}\n\n${memoryContext}`;
+    const memoryContext = isChat && notes.length > 0 ? `Foydalanuvchi haqida eslab qolgan narsalar: ${notes.join("; ")}.` : "";
+    const system = isChat ? `${PERSONA.system}\n\n${SAFETY_RULE}\n\n${memoryContext}` : QIDIRUV_SYSTEM;
     const assistantIndex = newMessages.length;
-    setMessages([...newMessages, { role: "assistant", type: "text", content: "" }]);
+    setThreadMessages([...newMessages, { role: "assistant", type: "text", content: "" }]);
 
     const setAssistantText = (text) => {
-      setMessages((prev) => prev.map((m, i) => (i === assistantIndex ? { ...m, content: text } : m)));
+      setThreadMessages((prev) => prev.map((m, i) => (i === assistantIndex ? { ...m, content: text } : m)));
     };
 
     const finish = (text) => {
       opts.onReplyReady && opts.onReplyReady(text);
-      if (opts.voiceTurn || voiceReplies) {
+      if (opts.voiceTurn || (isChat && voiceReplies)) {
         opts.onSpeakStart && opts.onSpeakStart();
         speak(text, () => { opts.onSpeakEnd && opts.onSpeakEnd(); });
       } else if (opts.onSpeakEnd) {
@@ -210,7 +224,6 @@ export default function App() {
       }
 
       if (!fullText.trim()) {
-        // Streaming produced nothing usable — fall back to a plain request so a reply is never missing.
         fullText = await fetchClaudeReply(system, buildApiMessages(newMessages));
         setAssistantText(fullText || "Kechirasan, javob topilmadi. Qayta urinib ko'ring.");
       }
@@ -226,7 +239,7 @@ export default function App() {
         finish("");
       }
     } finally {
-      setLoading(false);
+      setThreadLoading(false);
     }
   }
 
@@ -240,7 +253,14 @@ export default function App() {
       return;
     }
     setInput("");
-    sendTurn({ role: "user", type: "text", content: text }, text);
+    runTurn("chat", { role: "user", type: "text", content: text }, text);
+  }
+
+  function sendSearchMessage() {
+    const text = searchInput.trim();
+    if (!text || searchLoading || recording) return;
+    setSearchInput("");
+    runTurn("search", { role: "user", type: "text", content: text }, text);
   }
 
   function startEditMessage(index) {
@@ -297,7 +317,7 @@ export default function App() {
     try {
       fileInputRef.current && fileInputRef.current.click();
     } catch (e) {
-      setErrorMsg("Fayl tanlash oynasini ochib bo'lmadi. Bu ehtimol shu ko'rish oynasi cheklovi — ilova alohida saytga joylashtirilganda ishlaydi.");
+      setErrorMsg("Fayl tanlash oynasini ochib bo'lmadi.");
     }
   }
 
@@ -325,10 +345,8 @@ export default function App() {
   async function searchEncyclopedia(term) {
     const t = term.trim();
     if (!t) return;
-    setShowEncyForm(false);
-    setShowAttach(false);
-    setMessages((prev) => [...prev, { role: "user", type: "text", content: `🔎 ${t}` }]);
-    setLoading(true);
+    setSearchMessages((prev) => [...prev, { role: "user", type: "text", content: `🔎 ${t}` }]);
+    setSearchLoading(true);
     const tryLang = async (lang) => {
       try {
         const res = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t)}`);
@@ -343,10 +361,10 @@ export default function App() {
       if (!data || data.type === "disambiguation") data = (await tryLang("en")) || data;
       if (!data) {
         setErrorMsg("Bu mavzu bo'yicha ma'lumot topilmadi. Boshqacharoq so'z bilan sinab ko'ring.");
-        setLoading(false);
+        setSearchLoading(false);
         return;
       }
-      setMessages((prev) => [
+      setSearchMessages((prev) => [
         ...prev,
         {
           role: "assistant",
@@ -360,11 +378,12 @@ export default function App() {
     } catch (e) {
       setErrorMsg("Qidirishda xatolik yuz berdi. Internet aloqasini tekshiring.");
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
     }
   }
 
-  async function startRecording() {
+  async function startRecording(target) {
+    recordTargetRef.current = target || "chat";
     if (!window.isSecureContext) {
       setErrorMsg("Ovozli xabar faqat xavfsiz (https) sahifada ishlaydi.");
       return;
@@ -402,7 +421,7 @@ export default function App() {
       setRecordSeconds(0);
       recordTimerRef.current = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
     } catch (e) {
-      setErrorMsg("Mikrofonga ruxsat berilmadi. Brauzer sozlamalaridan ruxsat bering yoki ilovani alohida saytga joylashtirib qayta urinib ko'ring.");
+      setErrorMsg("Mikrofonga ruxsat berilmadi.");
     }
   }
 
@@ -413,13 +432,14 @@ export default function App() {
     if (!rec) return;
     try { voiceRecognitionRef.current && voiceRecognitionRef.current.stop(); } catch (e) {}
     const seconds = recordSeconds;
+    const thread = recordTargetRef.current;
     rec.recorder.onstop = () => {
       const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
       const reader = new FileReader();
       reader.onload = () => {
         const transcript = transcriptRef.current.trim() || "[Ovozli xabar, matnga aylantirib bo'lmadi]";
         const userMsg = { role: "user", type: "voice", content: reader.result, duration: seconds, transcript };
-        sendTurn(userMsg, transcript, { voiceTurn: true });
+        runTurn(thread, userMsg, transcript, { voiceTurn: true });
       };
       reader.onerror = () => setErrorMsg("Ovozli xabarni saqlab bo'lmadi.");
       reader.readAsDataURL(blob);
@@ -525,7 +545,7 @@ export default function App() {
 
   async function handleCallTurn(text) {
     setCallStatus("thinking");
-    await sendTurn({ role: "user", type: "text", content: text }, text, {
+    await runTurn("chat", { role: "user", type: "text", content: text }, text, {
       voiceTurn: true,
       onReplyReady: (reply) => setCallReply(reply),
       onSpeakStart: () => setCallStatus("speaking"),
@@ -533,30 +553,12 @@ export default function App() {
     });
   }
 
-  function addFamilyMember(name, relation) {
-    if (!name.trim()) return;
-    setFamilyMembers((prev) => [...prev, { name: name.trim(), relation: relation.trim() || "oila a'zosi" }]);
+  function addFamilyMember({ name, phone, category }) {
+    setFamilyMembers((prev) => [...prev, { name, phone, category }]);
   }
 
   function removeFamilyMember(i) {
     setFamilyMembers((prev) => prev.filter((_, idx) => idx !== i));
-  }
-
-  function confirmSos() {
-    const notified = familyMembers.map((f) => `${f.name} (${f.relation})`);
-    setSosLog({ time: new Date().toLocaleTimeString(), notified });
-    setShowSosConfirm(false);
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        type: "text",
-        content:
-          familyMembers.length > 0
-            ? `🆘 SOS signali qabul qilindi. ${notified.join(", ")}ga xabar yuborildi (agar ular ham Amora ilovasidan foydalansa). Bu — demo simulyatsiyasi; haqiqiy tarmoq uchun server kerak.`
-            : "🆘 SOS bosildi, lekin hali oila a'zosi qo'shilmagan. Sozlamalar → Oila bo'limidan qo'shing.",
-      },
-    ]);
   }
 
   function lockNow() {
@@ -570,15 +572,14 @@ export default function App() {
 
   function resetAll() {
     setMessages([]);
+    setSearchMessages([]);
     setNotes([]);
-    setCharacter(null);
     setScreen("onboarding");
     setOnboardStep(0);
   }
 
-  function startChat(char) {
-    setCharacter(char);
-    setMessages([{ role: "assistant", type: "text", content: `Assalomu alaykum${userName ? ", " + userName : ""}! Men ${char.name}man. Bugun kayfiyating qanday?` }]);
+  function finishNameStep() {
+    setMessages([{ role: "assistant", type: "text", content: `Assalomu alaykum${userName ? ", " + userName : ""}! Men ${PERSONA.name}man. Bugun kayfiyating qanday?` }]);
     setScreen("chat");
   }
 
@@ -594,6 +595,8 @@ export default function App() {
     "--weather": WEATHER_COLORS[weatherTint] || "transparent",
     fontFamily: "'Manrope', system-ui, sans-serif",
   };
+
+  const showSideMenu = ["chat", "oila", "qidiruv", "memory", "settings", "sos"].includes(screen);
 
   return (
     <div className="w-full min-h-screen flex justify-center amora-bg relative" style={rootVars}>
@@ -630,50 +633,69 @@ export default function App() {
         {screen === "onboarding" && (
           <Onboarding slides={onboardingSlides} step={onboardStep} setStep={setOnboardStep} onFinish={() => setScreen("name")} />
         )}
-        {screen === "name" && <NameScreen userName={userName} setUserName={setUserName} onNext={() => setScreen("select")} />}
-        {screen === "select" && <CharacterSelect characters={CHARACTERS} onSelect={startChat} onSos={() => setShowSosConfirm(true)} />}
-        {screen === "call" && character && (
-          <CallScreen character={character} callStatus={callStatus} callTranscript={callTranscript} callReply={callReply} onEnd={closeCall} voiceLevel={voiceLevel} />
+        {screen === "name" && <NameScreen userName={userName} setUserName={setUserName} onNext={finishNameStep} />}
+        {screen === "call" && (
+          <CallScreen character={PERSONA} callStatus={callStatus} callTranscript={callTranscript} callReply={callReply} onEnd={closeCall} voiceLevel={voiceLevel} />
         )}
-        {(screen === "chat" || screen === "memory" || screen === "settings") && character && (
-          <div className="flex flex-col flex-1 min-h-screen">
-            <div className="flex-1 overflow-hidden flex flex-col">
-              {screen === "chat" && (
-                <ChatScreen
-                  character={character} messages={messages} input={input} setInput={setInput}
-                  loading={loading} onSend={sendMessage} scrollRef={scrollRef}
-                  showStickers={showStickers} setShowStickers={setShowStickers} onSticker={sendSticker}
-                  showAttach={showAttach} setShowAttach={setShowAttach}
-                  onFilePick={openFilePicker} fileInputRef={fileInputRef} onFileChange={handleFilePick}
-                  onShareLocation={shareLocation}
-                  showContactForm={showContactForm} setShowContactForm={setShowContactForm} onShareContact={shareContact}
-                  showEncyForm={showEncyForm} setShowEncyForm={setShowEncyForm} onSearchEncyclopedia={searchEncyclopedia}
-                  voiceReplies={voiceReplies} errorMsg={errorMsg} onDismissError={() => setErrorMsg("")}
-                  aiMood={aiMood} reactionPickerFor={reactionPickerFor} setReactionPickerFor={setReactionPickerFor}
-                  onReact={reactToMessage}
-                  editingIndex={editingIndex} onStartEdit={startEditMessage} onCancelEdit={cancelEditMessage} onDeleteMessage={deleteMessage}
-                  recording={recording} recordSeconds={recordSeconds} onStartRecording={startRecording} onStopRecording={stopRecording}
-                  onNavigate={setScreen} onSwitchCharacter={() => { setCharacter(null); setScreen("select"); }}
-                  onOpenCall={openCall}
-                  onLockNow={lockNow} pinEnabled={pinEnabled} onDeleteAll={() => setShowResetConfirm(true)}
-                />
-              )}
-              {screen === "memory" && (
-                <MemoryScreen notes={notes} noteInput={noteInput} setNoteInput={setNoteInput} onAdd={addNote}
-                  onRemove={(i) => setNotes((prev) => prev.filter((_, idx) => idx !== i))} />
-              )}
-              {screen === "settings" && (
-                <SettingsScreen
-                  dailyCheckin={dailyCheckin} setDailyCheckin={setDailyCheckin}
-                  healthyUsage={healthyUsage} setHealthyUsage={setHealthyUsage}
-                  voiceReplies={voiceReplies} setVoiceReplies={setVoiceReplies}
-                  themeId={themeId} setThemeId={setThemeId} onReset={() => setShowResetConfirm(true)}
-                  pinEnabled={pinEnabled} setPinEnabled={setPinEnabled} pinCode={pinCode} setPinCode={setPinCode}
-                  familyMembers={familyMembers} onAddFamily={addFamilyMember} onRemoveFamily={removeFamilyMember}
-                />
-              )}
-            </div>
-            <BottomNav screen={screen} setScreen={setScreen} />
+
+        {showSideMenu && (
+          <div className="flex flex-col flex-1 min-h-screen relative">
+            <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} screen={screen} onNavigate={setScreen} onOpenSos={() => setScreen("sos")} />
+
+            {screen === "chat" && (
+              <ChatScreen
+                persona={PERSONA} messages={messages} input={input} setInput={setInput}
+                loading={loading} onSend={sendMessage} scrollRef={scrollRef}
+                showStickers={showStickers} setShowStickers={setShowStickers} onSticker={sendSticker}
+                showAttach={showAttach} setShowAttach={setShowAttach}
+                onFilePick={openFilePicker} fileInputRef={fileInputRef} onFileChange={handleFilePick}
+                onShareLocation={shareLocation}
+                showContactForm={showContactForm} setShowContactForm={setShowContactForm} onShareContact={shareContact}
+                errorMsg={errorMsg} onDismissError={() => setErrorMsg("")}
+                aiMood={aiMood} reactionPickerFor={reactionPickerFor} setReactionPickerFor={setReactionPickerFor}
+                onReact={reactToMessage}
+                editingIndex={editingIndex} onStartEdit={startEditMessage} onCancelEdit={cancelEditMessage} onDeleteMessage={deleteMessage}
+                recording={recording} recordSeconds={recordSeconds}
+                onStartRecording={() => startRecording("chat")} onStopRecording={stopRecording}
+                onOpenMenu={() => setMenuOpen(true)} onOpenCall={openCall}
+              />
+            )}
+
+            {screen === "qidiruv" && (
+              <QidiruvScreen
+                onOpenMenu={() => setMenuOpen(true)}
+                messages={searchMessages} input={searchInput} setInput={setSearchInput}
+                loading={searchLoading} onSend={sendSearchMessage} scrollRef={searchScrollRef}
+                errorMsg={errorMsg} onDismissError={() => setErrorMsg("")}
+                recording={recording} recordSeconds={recordSeconds}
+                onStartRecording={() => startRecording("search")} onStopRecording={stopRecording}
+                onQuickEncyclopedia={searchEncyclopedia}
+              />
+            )}
+
+            {screen === "oila" && (
+              <FamilyScreen onOpenMenu={() => setMenuOpen(true)} familyMembers={familyMembers} onAdd={addFamilyMember} onRemove={removeFamilyMember} />
+            )}
+
+            {screen === "memory" && (
+              <MemoryScreen onOpenMenu={() => setMenuOpen(true)} notes={notes} noteInput={noteInput} setNoteInput={setNoteInput} onAdd={addNote}
+                onRemove={(i) => setNotes((prev) => prev.filter((_, idx) => idx !== i))} />
+            )}
+
+            {screen === "settings" && (
+              <SettingsScreen
+                onOpenMenu={() => setMenuOpen(true)}
+                dailyCheckin={dailyCheckin} setDailyCheckin={setDailyCheckin}
+                healthyUsage={healthyUsage} setHealthyUsage={setHealthyUsage}
+                voiceReplies={voiceReplies} setVoiceReplies={setVoiceReplies}
+                themeId={themeId} setThemeId={setThemeId} onReset={() => setShowResetConfirm(true)}
+                pinEnabled={pinEnabled} setPinEnabled={setPinEnabled} pinCode={pinCode} setPinCode={setPinCode}
+              />
+            )}
+
+            {screen === "sos" && (
+              <SosScreen onOpenMenu={() => setMenuOpen(true)} familyMembers={familyMembers} userName={userName} />
+            )}
           </div>
         )}
         </>
@@ -683,27 +705,11 @@ export default function App() {
             <div className="w-full rounded-2xl p-5" style={{ background: "var(--surface)" }}>
               <div className="amora-display text-lg mb-2" style={{ color: "var(--text)" }}>Rostdan ham o'chirilsinmi?</div>
               <p className="text-xs leading-relaxed mb-4" style={{ color: "var(--muted)" }}>
-                Barcha yozishmalar, eslatmalar va tanlangan hamroh butunlay o'chiriladi. Bu amalni ortga qaytarib bo'lmaydi.
+                Barcha yozishmalar va eslatmalar butunlay o'chiriladi. Bu amalni ortga qaytarib bo'lmaydi.
               </p>
               <div className="flex gap-2">
                 <button onClick={confirmResetAll} className="flex-1 py-3 rounded-xl text-sm font-semibold" style={{ background: "#D65C86", color: "#fff" }}>Ha, o'chirilsin</button>
                 <button onClick={() => setShowResetConfirm(false)} className="px-4 py-3 rounded-xl text-sm" style={{ background: "var(--bg)", color: "var(--muted)" }}>Bekor qilish</button>
-              </div>
-            </div>
-          </div>
-        )}
-        {showSosConfirm && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center px-6" style={{ background: "rgba(0,0,0,0.6)" }}>
-            <div className="w-full rounded-2xl p-5" style={{ background: "var(--surface)" }}>
-              <div className="amora-display text-lg mb-2" style={{ color: "var(--text)" }}>Yordam so'ralsinmi?</div>
-              <p className="text-xs leading-relaxed mb-4" style={{ color: "var(--muted)" }}>
-                {familyMembers.length > 0
-                  ? `Quyidagi ${familyMembers.length} ta oila a'zosiga xabar yuboriladi (agar ular ham Amora'dan foydalansa): ${familyMembers.map((f) => f.name).join(", ")}.`
-                  : "Hali oila a'zosi qo'shilmagan. Sozlamalar → Oila bo'limidan qo'shishingiz mumkin."}
-              </p>
-              <div className="flex gap-2">
-                <button onClick={confirmSos} className="flex-1 py-3 rounded-xl text-sm font-semibold" style={{ background: "#D65C86", color: "#fff" }}>Tasdiqlash</button>
-                <button onClick={() => setShowSosConfirm(false)} className="px-4 py-3 rounded-xl text-sm" style={{ background: "var(--bg)", color: "var(--muted)" }}>Bekor qilish</button>
               </div>
             </div>
           </div>
