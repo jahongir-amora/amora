@@ -248,17 +248,17 @@ export default function App() {
 
       if (!fullText.trim()) {
         fullText = await fetchClaudeReply(system, buildApiMessages(newMessages));
-        setAssistantText(fullText || "Kechirasan, javob topilmadi. Qayta urinib ko'ring.");
+        setAssistantText(fullText || "Kechirasiz, javob topilmadi. Qayta urinib ko'ring.");
       }
 
       finish(fullText);
     } catch (e) {
       try {
         fullText = await fetchClaudeReply(system, buildApiMessages(newMessages));
-        setAssistantText(fullText || "Kechirasan, hozir bog'lanib bo'lmadi. Birozdan so'ng qayta urinib ko'r.");
+        setAssistantText(fullText || "Kechirasiz, hozir bog'lanib bo'lmadi. Birozdan so'ng qayta urinib ko'ring.");
         finish(fullText);
       } catch (e2) {
-        setAssistantText("Kechirasan, hozir bog'lanib bo'lmadi. Birozdan so'ng qayta urinib ko'r.");
+        setAssistantText("Kechirasiz, hozir bog'lanib bo'lmadi. Birozdan so'ng qayta urinib ko'ring.");
         finish("");
       }
     } finally {
@@ -604,7 +604,7 @@ export default function App() {
 
   function openChat() {
     if (messages.length === 0) {
-      setMessages([{ role: "assistant", type: "text", content: `Assalomu alaykum! Men ${PERSONA.name}man. Bugun kayfiyating qanday?` }]);
+      setMessages([{ role: "assistant", type: "text", content: `Assalomu alaykum! Men ${PERSONA.name}man. Bugun kayfiyatingiz qanday?` }]);
     }
     setScreen("chat");
   }
