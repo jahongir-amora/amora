@@ -7,4 +7,4 @@
 // Anthropic'ga uzatadi.
 //
 // Qanday sozlash kerakligi: repo tugida /worker/README.md faylini o'qing.
-export const API_ENDPOINT = "https://amora-proxy.YOUR-SUBDOMAIN.workers.dev/v1/messages";
+export const API_ENDPOINT = "https://amora-proxy.rjahongir883.workers.dev/v1/messages";
