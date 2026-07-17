@@ -1,3 +1,5 @@
+import { API_ENDPOINT } from "../constants/config.js";
+
 export function buildApiMessages(msgs) {
   return msgs.map((m) => ({
     role: m.role,
@@ -16,7 +18,7 @@ export function buildApiMessages(msgs) {
 }
 
 export async function fetchClaudeReply(system, apiMessages) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch(API_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system, messages: apiMessages }),

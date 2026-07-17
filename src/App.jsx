@@ -5,6 +5,7 @@ import { THEMES, WEATHER_COLORS } from "./constants/themes.js";
 import { PERSONA } from "./constants/persona.js";
 import { QIDIRUV_SYSTEM } from "./constants/qidiruv.js";
 import { SAFETY_RULE } from "./constants/safety.js";
+import { API_ENDPOINT } from "./constants/config.js";
 
 import { buildApiMessages, fetchClaudeReply } from "./utils/api.js";
 import { isEmojiOnly, pickEmojiReply } from "./utils/text.js";
@@ -21,25 +22,38 @@ import { FamilyScreen } from "./components/FamilyScreen.jsx";
 import { SosScreen } from "./components/SosScreen.jsx";
 import { SideMenu } from "./components/SideMenu.jsx";
 
+const STORAGE_KEY = "amora_state_v1";
+
+function loadSaved() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
 export default function App() {
+  const saved = loadSaved();
+
   const [screen, setScreen] = useState("splash");
-  const [userName, setUserName] = useState("");
+  const [userName, setUserName] = useState(saved.userName || "");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(saved.messages || []);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [searchMessages, setSearchMessages] = useState([]);
+  const [searchMessages, setSearchMessages] = useState(saved.searchMessages || []);
   const [searchInput, setSearchInput] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
 
-  const [notes, setNotes] = useState([]);
+  const [notes, setNotes] = useState(saved.notes || []);
   const [noteInput, setNoteInput] = useState("");
-  const [dailyCheckin, setDailyCheckin] = useState(true);
-  const [healthyUsage, setHealthyUsage] = useState(true);
-  const [voiceReplies, setVoiceReplies] = useState(false);
-  const [themeId, setThemeId] = useState("cosmic");
+  const [dailyCheckin, setDailyCheckin] = useState(saved.dailyCheckin !== undefined ? saved.dailyCheckin : true);
+  const [healthyUsage, setHealthyUsage] = useState(saved.healthyUsage !== undefined ? saved.healthyUsage : true);
+  const [voiceReplies, setVoiceReplies] = useState(saved.voiceReplies || false);
+  const [themeId, setThemeId] = useState(saved.themeId || "cosmic");
   const [showStickers, setShowStickers] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -52,10 +66,10 @@ export default function App() {
   const [callStatus, setCallStatus] = useState("idle");
   const [callTranscript, setCallTranscript] = useState("");
   const [callReply, setCallReply] = useState("");
-  const [familyMembers, setFamilyMembers] = useState([]);
-  const [pinEnabled, setPinEnabled] = useState(false);
-  const [pinCode, setPinCode] = useState("");
-  const [locked, setLocked] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState(saved.familyMembers || []);
+  const [pinEnabled, setPinEnabled] = useState(saved.pinEnabled || false);
+  const [pinCode, setPinCode] = useState(saved.pinCode || "");
+  const [locked, setLocked] = useState(!!(saved.pinEnabled && saved.pinCode));
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [weatherTint, setWeatherTint] = useState("");
   const [voiceLevel, setVoiceLevel] = useState(0);
@@ -108,6 +122,16 @@ export default function App() {
   useEffect(() => {
     if (searchScrollRef.current) searchScrollRef.current.scrollTop = searchScrollRef.current.scrollHeight;
   }, [searchMessages, searchLoading]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        userName, messages, searchMessages, notes,
+        dailyCheckin, healthyUsage, voiceReplies, themeId,
+        familyMembers, pinEnabled, pinCode,
+      }));
+    } catch (e) {}
+  }, [userName, messages, searchMessages, notes, dailyCheckin, healthyUsage, voiceReplies, themeId, familyMembers, pinEnabled, pinCode]);
 
   function speak(text, onEnd) {
     if (!text) { if (onEnd) onEnd(); return; }
@@ -189,7 +213,7 @@ export default function App() {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 25000);
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch(API_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
@@ -573,7 +597,9 @@ export default function App() {
     setMessages([]);
     setSearchMessages([]);
     setNotes([]);
+    setFamilyMembers([]);
     setScreen("home");
+    try { window.localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   }
 
   function openChat() {
