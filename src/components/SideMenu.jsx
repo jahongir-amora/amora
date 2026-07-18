@@ -1,9 +1,10 @@
 import React from "react";
 import { MessageCircle, Users, Search, Brain, Settings as SettingsIcon, User, X } from "lucide-react";
+import { AmoraOrb } from "./AmoraOrb.jsx";
 
 const ITEMS = [
-  { id: "chat", label: "Suhbat", icon: MessageCircle },
   { id: "profile", label: "Profil", icon: User },
+  { id: "chat", label: "Suhbat", icon: MessageCircle },
   { id: "oila", label: "Oila", icon: Users },
   { id: "qidiruv", label: "AI Qidiruv", icon: Search },
   { id: "memory", label: "Xotira", icon: Brain },
@@ -16,7 +17,10 @@ export function SideMenu({ open, onClose, screen, onNavigate, onOpenSos }) {
     <div className="absolute inset-0 z-30 flex" style={{ background: "rgba(0,0,0,0.5)" }} onClick={onClose}>
       <div className="w-72 h-full amora-fade flex flex-col p-5" style={{ background: "var(--surface)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <span className="amora-display text-xl" style={{ color: "var(--text)" }}>Amora</span>
+          <div className="flex items-center gap-2">
+            <AmoraOrb size={20} showStars={false} />
+            <span className="amora-display text-xl" style={{ color: "var(--text)" }}>Amora</span>
+          </div>
           <button onClick={onClose}><X size={20} color="var(--muted)" /></button>
         </div>
 
