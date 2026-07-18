@@ -42,6 +42,7 @@ export default function App() {
   const [profileAvatar, setProfileAvatar] = useState(saved.profileAvatar || "🙂");
   const [profileBio, setProfileBio] = useState(saved.profileBio || "");
   const [profileBirthdate, setProfileBirthdate] = useState(saved.profileBirthdate || "");
+  const [onboarded, setOnboarded] = useState(saved.onboarded || false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [messages, setMessages] = useState(saved.messages || []);
@@ -130,12 +131,12 @@ export default function App() {
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        userName, profileAvatar, profileBio, profileBirthdate, messages, searchMessages, notes,
+        userName, profileAvatar, profileBio, profileBirthdate, onboarded, messages, searchMessages, notes,
         dailyCheckin, healthyUsage, voiceReplies, themeId,
         familyMembers, pinEnabled, pinCode,
       }));
     } catch (e) {}
-  }, [userName, profileAvatar, profileBio, profileBirthdate, messages, searchMessages, notes, dailyCheckin, healthyUsage, voiceReplies, themeId, familyMembers, pinEnabled, pinCode]);
+  }, [userName, profileAvatar, profileBio, profileBirthdate, onboarded, messages, searchMessages, notes, dailyCheckin, healthyUsage, voiceReplies, themeId, familyMembers, pinEnabled, pinCode]);
 
   function speak(text, onEnd) {
     if (!text) { if (onEnd) onEnd(); return; }
@@ -613,7 +614,9 @@ export default function App() {
     setProfileBio("");
     setProfileBirthdate("");
     setProfileAvatar("🙂");
-    setScreen("home");
+    setUserName("");
+    setOnboarded(false);
+    setScreen("profile");
     try { window.localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   }
 
@@ -646,7 +649,7 @@ export default function App() {
     fontFamily: "'Manrope', system-ui, sans-serif",
   };
 
-  const showSideMenu = ["chat", "oila", "qidiruv", "memory", "settings", "sos"].includes(screen);
+  const showSideMenu = ["chat", "oila", "qidiruv", "memory", "settings", "sos", "profile"].includes(screen);
 
   return (
     <div className="w-full min-h-screen flex justify-center amora-bg relative" style={rootVars}>
@@ -685,7 +688,7 @@ export default function App() {
           <LockScreen pinCode={pinCode} onUnlock={() => setLocked(false)} />
         ) : (
         <>
-        {screen === "splash" && <SplashScreen onFinish={() => setScreen("home")} />}
+        {screen === "splash" && <SplashScreen onFinish={() => setScreen(onboarded ? "home" : "profile")} />}
         {screen === "home" && <HomeScreen onNavigate={navigateFromMenu} />}
         {screen === "call" && (
           <CallScreen character={PERSONA} callStatus={callStatus} callTranscript={callTranscript} callReply={callReply} onEnd={closeCall} voiceLevel={voiceLevel} />
@@ -738,6 +741,8 @@ export default function App() {
                 profileBio={profileBio} setProfileBio={setProfileBio}
                 profileBirthdate={profileBirthdate} setProfileBirthdate={setProfileBirthdate}
                 onGoTheme={() => setScreen("settings")}
+                isOnboarding={!onboarded}
+                onFinishOnboarding={() => { setOnboarded(true); setScreen("home"); }}
               />
             )}
 
