@@ -6,6 +6,7 @@ import { TopBar } from "./TopBar.jsx";
 import { ErrorBanner } from "./ErrorBanner.jsx";
 import { MessageBubble } from "./MessageBubble.jsx";
 import { STICKERS } from "../constants/stickers.js";
+import { AMORA_CHARACTER_IMG } from "../constants/character.js";
 
 export function ChatScreen({
   persona, messages, input, setInput, loading, onSend, scrollRef,
@@ -28,7 +29,7 @@ export function ChatScreen({
         title={`${persona.name} ${aiMood}`}
         subtitle={recording ? "🎤 Ovoz yozilmoqda..." : loading ? "yozmoqda..." : "AI hamroh · haqiqiy odam emas"}
         onOpenMenu={onOpenMenu}
-        showOrb orbColor={persona.color} orbPulse={loading || recording}
+        showOrb orbColor={"#FF4D6D"} orbPulse={loading || recording}
         rightSlot={
           <button onClick={onOpenCall} className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "var(--surface)" }}>
             📞
@@ -39,6 +40,14 @@ export function ChatScreen({
       <ErrorBanner message={errorMsg} onDismiss={onDismissError} />
 
       <div ref={scrollRef} className="amora-scroll flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+        <div className="flex justify-center flex-shrink-0" style={{
+          opacity: messages.length <= 1 ? 1 : 0.16,
+          maxHeight: messages.length <= 1 ? 190 : 70,
+          transition: "opacity 1s ease, max-height 0.8s ease",
+          overflow: "hidden",
+        }}>
+          <img src={AMORA_CHARACTER_IMG} alt="Amora" style={{ width: 190, pointerEvents: "none" }} />
+        </div>
         {messages.map((m, i) => (
           <MessageBubble key={i} m={m} index={i} character={persona} hasLaterAssistant={i < lastAssistantIdx || (m.role === "user" && i < messages.length - 1)}
             onReactRequest={setReactionPickerFor} reactionPickerFor={reactionPickerFor} onReact={onReact}
@@ -97,10 +106,10 @@ export function ChatScreen({
           </div>
         ) : (
           <>
-            <button onClick={() => { setShowAttach(!showAttach); setShowStickers(false); }} className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: showAttach ? persona.color : "var(--surface)" }}>
+            <button onClick={() => { setShowAttach(!showAttach); setShowStickers(false); }} className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: showAttach ? "#FF4D6D" : "var(--surface)" }}>
               <Plus size={18} color={showAttach ? "#241A2E" : "var(--muted)"} />
             </button>
-            <button onClick={() => { setShowStickers(!showStickers); setShowAttach(false); }} className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: showStickers ? persona.color : "var(--surface)" }}>
+            <button onClick={() => { setShowStickers(!showStickers); setShowAttach(false); }} className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: showStickers ? "#FF4D6D" : "var(--surface)" }}>
               <Smile size={18} color={showStickers ? "#241A2E" : "var(--muted)"} />
             </button>
             <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onSend()} placeholder="Xabar yozing..."
