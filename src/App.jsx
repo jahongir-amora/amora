@@ -110,6 +110,8 @@ export default function App() {
   const scrollRef = useRef(null);
   const searchScrollRef = useRef(null);
   const fileInputRef = useRef(null);
+  const searchFileInputRef = useRef(null);
+  const [showSearchAttach, setShowSearchAttach] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef(null);
@@ -321,9 +323,14 @@ export default function App() {
     setReactionPickerFor(null);
   }
 
-  function handleFilePick(e) {
-    const file = e.target.files && e.target.files[0];
+  const MAX_FILE_MB = 15;
+
+  function processPickedFile(thread, file) {
     if (!file) return;
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      setErrorMsg(`Fayl juda katta (${MAX_FILE_MB}MB dan kichik bo'lishi kerak).`);
+      return;
+    }
     try {
       const reader = new FileReader();
       reader.onload = () => {
@@ -332,9 +339,12 @@ export default function App() {
         else if (file.type.startsWith("video/")) type = "video";
         else if (file.type.startsWith("audio/")) type = "audiofile";
         const userMsg = { role: "user", type, content: reader.result, fileName: file.name, fileSize: file.size };
-        const canAnalyze = type === "image" || file.type === "application/pdf";
+        const canAnalyze = type === "image" || type === "video" || type === "file";
         if (canAnalyze) {
-          runTurn("chat", userMsg, type === "image" ? "[rasm yubordi]" : "[hujjat yubordi]");
+          const label = type === "image" ? "[rasm yubordi]" : type === "video" ? "[video yubordi]" : "[hujjat yubordi]";
+          runTurn(thread, userMsg, label);
+        } else if (thread === "search") {
+          setSearchMessages((prev) => [...prev, userMsg]);
         } else {
           setMessages((prev) => [...prev, userMsg]);
         }
@@ -344,13 +354,31 @@ export default function App() {
     } catch (e) {
       setErrorMsg("Fayl yuklashda xatolik yuz berdi.");
     }
+  }
+
+  function handleFilePick(e) {
+    processPickedFile("chat", e.target.files && e.target.files[0]);
     e.target.value = "";
     setShowAttach(false);
+  }
+
+  function handleSearchFilePick(e) {
+    processPickedFile("search", e.target.files && e.target.files[0]);
+    e.target.value = "";
+    setShowSearchAttach(false);
   }
 
   function openFilePicker() {
     try {
       fileInputRef.current && fileInputRef.current.click();
+    } catch (e) {
+      setErrorMsg("Fayl tanlash oynasini ochib bo'lmadi.");
+    }
+  }
+
+  function openSearchFilePicker() {
+    try {
+      searchFileInputRef.current && searchFileInputRef.current.click();
     } catch (e) {
       setErrorMsg("Fayl tanlash oynasini ochib bo'lmadi.");
     }
@@ -726,6 +754,8 @@ export default function App() {
                 recording={recording} recordSeconds={recordSeconds}
                 onStartRecording={() => startRecording("search")} onStopRecording={stopRecording}
                 onQuickEncyclopedia={searchEncyclopedia}
+                showAttach={showSearchAttach} setShowAttach={setShowSearchAttach}
+                onFilePick={openSearchFilePicker} fileInputRef={searchFileInputRef} onFileChange={handleSearchFilePick}
               />
             )}
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Send, Mic, Square, BookOpen } from "lucide-react";
+import { Send, Mic, Square, BookOpen, Plus, Image as ImageIcon, FileText } from "lucide-react";
 import { TopBar } from "./TopBar.jsx";
 import { ErrorBanner } from "./ErrorBanner.jsx";
 import { MessageBubble } from "./MessageBubble.jsx";
@@ -7,7 +7,7 @@ import { MessageBubble } from "./MessageBubble.jsx";
 export function QidiruvScreen({
   onOpenMenu, messages, input, setInput, loading, onSend, scrollRef,
   errorMsg, onDismissError, recording, recordSeconds, onStartRecording, onStopRecording,
-  onQuickEncyclopedia,
+  onQuickEncyclopedia, showAttach, setShowAttach, onFilePick, fileInputRef, onFileChange,
 }) {
   const [encyTerm, setEncyTerm] = useState("");
   const [showEncy, setShowEncy] = useState(false);
@@ -22,7 +22,7 @@ export function QidiruvScreen({
           <div className="text-center mt-10 px-6">
             <div className="text-3xl mb-3">🔍</div>
             <div className="text-sm" style={{ color: "var(--muted)" }}>
-              Har qanday savol bering — tushuntirish, tarjima, hisob-kitob, test yechish, topshiriq yoki umuman istalgan mavzu.
+              Har qanday savol bering, yoki rasm/video/hujjat yuboring — tushuntirish, tarjima, hisob-kitob, test yechish yoki umuman istalgan mavzu.
             </div>
           </div>
         )}
@@ -30,6 +30,22 @@ export function QidiruvScreen({
           <MessageBubble key={i} m={m} index={i} hasLaterAssistant={false} onReactRequest={() => {}} reactionPickerFor={null} onReact={() => {}} onStartEdit={() => {}} onDeleteMessage={() => {}} />
         ))}
       </div>
+
+      <input type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx" ref={fileInputRef} onChange={onFileChange} className="hidden" />
+
+      {showAttach && (
+        <div className="px-4 pb-3 grid grid-cols-3 gap-2">
+          <button onClick={onFilePick} className="flex flex-col items-center gap-1 py-3 rounded-xl" style={{ background: "var(--surface)" }}>
+            <ImageIcon size={18} color="var(--muted)" /><span className="text-[10px]" style={{ color: "var(--muted)" }}>Rasm/Video</span>
+          </button>
+          <button onClick={onFilePick} className="flex flex-col items-center gap-1 py-3 rounded-xl" style={{ background: "var(--surface)" }}>
+            <FileText size={18} color="var(--muted)" /><span className="text-[10px]" style={{ color: "var(--muted)" }}>PDF/Word/Excel</span>
+          </button>
+          <button onClick={() => { setShowEncy(!showEncy); setShowAttach(false); }} className="flex flex-col items-center gap-1 py-3 rounded-xl" style={{ background: "var(--surface)" }}>
+            <BookOpen size={18} color="var(--muted)" /><span className="text-[10px]" style={{ color: "var(--muted)" }}>Ensiklopediya</span>
+          </button>
+        </div>
+      )}
 
       {showEncy && (
         <div className="px-4 pb-3 flex gap-2">
@@ -47,8 +63,8 @@ export function QidiruvScreen({
           </div>
         ) : (
           <>
-            <button onClick={() => setShowEncy(!showEncy)} className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: showEncy ? "var(--accent)" : "var(--surface)" }}>
-              <BookOpen size={18} color={showEncy ? "var(--accent-text)" : "var(--muted)"} />
+            <button onClick={() => { setShowAttach(!showAttach); setShowEncy(false); }} className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: showAttach ? "var(--accent)" : "var(--surface)" }}>
+              <Plus size={19} color={showAttach ? "var(--accent-text)" : "var(--muted)"} />
             </button>
             <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onSend()} placeholder="Savolingizni yozing..."
               className="flex-1 px-4 py-3 rounded-full text-sm outline-none min-w-0" style={{ background: "var(--surface)", color: "var(--text)" }} />

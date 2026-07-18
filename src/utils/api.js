@@ -7,22 +7,14 @@ function parseDataUrl(dataUrl) {
 }
 
 function messageContent(m) {
-  // Rasm yoki PDF bo'lsa — AI aslida ko'rishi (tahlil qila olishi) uchun
-  // matn + media bloklaridan iborat massiv qaytaramiz.
-  if (m.type === "image" && typeof m.content === "string" && m.content.startsWith("data:")) {
+  // Rasm, video yoki hujjat bo'lsa — AI aslida ko'rishi/o'qishi (tahlil qila olishi)
+  // uchun matn + media bloklaridan iborat massiv qaytaramiz.
+  if ((m.type === "image" || m.type === "file" || m.type === "video") && typeof m.content === "string" && m.content.startsWith("data:")) {
     const parsed = parseDataUrl(m.content);
     if (parsed) {
+      const label = m.type === "image" ? "rasm" : m.type === "video" ? "video" : `"${m.fileName || "hujjat"}" nomli fayl`;
       return [
-        { type: "text", text: "Foydalanuvchi rasm yubordi. Diqqat bilan ko'rib, nima tasvirlanganini tabiiy tilda tushuntiring yoki savoliga shu rasm asosida javob bering." },
-        { type: "media", media_type: parsed.mediaType, data: parsed.data },
-      ];
-    }
-  }
-  if (m.type === "file" && typeof m.content === "string" && m.content.startsWith("data:application/pdf")) {
-    const parsed = parseDataUrl(m.content);
-    if (parsed) {
-      return [
-        { type: "text", text: `Foydalanuvchi "${m.fileName || "hujjat"}" nomli PDF fayl yubordi. Uni o'qib, mazmuni haqida gapiring yoki savoliga shu fayl asosida javob bering.` },
+        { type: "text", text: `Foydalanuvchi ${label} yubordi. Diqqat bilan ko'rib/o'qib chiqing, nima ekanini va mazmunini tabiiy tilda tushuntiring yoki savoliga shu asosda javob bering.` },
         { type: "media", media_type: parsed.mediaType, data: parsed.data },
       ];
     }
