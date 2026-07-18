@@ -41,12 +41,12 @@ export function ChatScreen({
 
       <div ref={scrollRef} className="amora-scroll flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
         <div className="flex justify-center flex-shrink-0" style={{
-          opacity: messages.length <= 1 ? 1 : 0.16,
-          maxHeight: messages.length <= 1 ? 190 : 70,
+          opacity: messages.length <= 1 ? 1 : 0.14,
+          maxHeight: messages.length <= 1 ? "56vh" : 64,
           transition: "opacity 1s ease, max-height 0.8s ease",
           overflow: "hidden",
         }}>
-          <img src={AMORA_CHARACTER_IMG} alt="Amora" style={{ width: 190, pointerEvents: "none" }} />
+          <img src={AMORA_CHARACTER_IMG} alt="Amora" style={{ width: "100%", maxWidth: 380, objectFit: "contain", pointerEvents: "none" }} />
         </div>
         {messages.map((m, i) => (
           <MessageBubble key={i} m={m} index={i} character={persona} hasLaterAssistant={i < lastAssistantIdx || (m.role === "user" && i < messages.length - 1)}
