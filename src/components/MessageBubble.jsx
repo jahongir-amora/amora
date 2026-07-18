@@ -1,7 +1,7 @@
 import React from "react";
-import { Mic, Paperclip, MapPin, User as UserIcon } from "lucide-react";
+import { Mic, Paperclip, MapPin, User as UserIcon, Share2 } from "lucide-react";
 import { ReactionPicker } from "./ReactionPicker.jsx";
-import { exportAsDoc, exportAsExcel, exportAsPdf, exportImage } from "../utils/export.js";
+import { exportAsDoc, exportAsExcel, exportAsPdf, exportImage, shareDataUrl } from "../utils/export.js";
 
 export function MessageBubble({ m, index, character, isLast, hasLaterAssistant, onReactRequest, reactionPickerFor, onReact, onStartEdit, onDeleteMessage }) {
   const isUser = m.role === "user";
@@ -14,7 +14,15 @@ export function MessageBubble({ m, index, character, isLast, hasLaterAssistant, 
   if (m.type === "sticker") {
     bodyNode = <div className="text-4xl">{m.content}</div>;
   } else if (m.type === "image") {
-    bodyNode = <img src={m.content} alt="rasm" className="max-w-full rounded-2xl" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.35)" }} />;
+    bodyNode = (
+      <div style={{ position: "relative" }}>
+        <img src={m.content} alt="rasm" className="max-w-full rounded-2xl" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.35)" }} />
+        <button onClick={(e) => { e.stopPropagation(); shareDataUrl(m.content, m.fileName || "rasm.jpg", "Amora"); }}
+          className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.55)" }}>
+          <Share2 size={14} color="#fff" />
+        </button>
+      </div>
+    );
   } else if (m.type === "video") {
     bodyNode = <video src={m.content} controls className="max-w-full rounded-2xl" style={{ maxHeight: 240 }} />;
   } else if (m.type === "audiofile") {
@@ -40,6 +48,9 @@ export function MessageBubble({ m, index, character, isLast, hasLaterAssistant, 
           <div>{m.fileName}</div>
           <div className="text-xs" style={{ color: "var(--muted)" }}>{Math.round((m.fileSize || 0) / 1024)} KB</div>
         </div>
+        <button onClick={(e) => { e.stopPropagation(); shareDataUrl(m.content, m.fileName, "Amora"); }} className="ml-2">
+          <Share2 size={16} color="var(--muted)" />
+        </button>
       </div>
     );
   } else if (m.type === "location") {

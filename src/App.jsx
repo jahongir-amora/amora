@@ -13,6 +13,7 @@ import { isEmojiOnly, pickEmojiReply } from "./utils/text.js";
 import { LockScreen } from "./components/LockScreen.jsx";
 import { SplashScreen } from "./components/SplashScreen.jsx";
 import { HomeScreen } from "./components/HomeScreen.jsx";
+import { ProfileScreen } from "./components/ProfileScreen.jsx";
 import { CallScreen } from "./components/CallScreen.jsx";
 import { ChatScreen } from "./components/ChatScreen.jsx";
 import { QidiruvScreen } from "./components/QidiruvScreen.jsx";
@@ -38,6 +39,9 @@ export default function App() {
 
   const [screen, setScreen] = useState("splash");
   const [userName, setUserName] = useState(saved.userName || "");
+  const [profileAvatar, setProfileAvatar] = useState(saved.profileAvatar || "🙂");
+  const [profileBio, setProfileBio] = useState(saved.profileBio || "");
+  const [profileBirthdate, setProfileBirthdate] = useState(saved.profileBirthdate || "");
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [messages, setMessages] = useState(saved.messages || []);
@@ -126,12 +130,12 @@ export default function App() {
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        userName, messages, searchMessages, notes,
+        userName, profileAvatar, profileBio, profileBirthdate, messages, searchMessages, notes,
         dailyCheckin, healthyUsage, voiceReplies, themeId,
         familyMembers, pinEnabled, pinCode,
       }));
     } catch (e) {}
-  }, [userName, messages, searchMessages, notes, dailyCheckin, healthyUsage, voiceReplies, themeId, familyMembers, pinEnabled, pinCode]);
+  }, [userName, profileAvatar, profileBio, profileBirthdate, messages, searchMessages, notes, dailyCheckin, healthyUsage, voiceReplies, themeId, familyMembers, pinEnabled, pinCode]);
 
   function speak(text, onEnd) {
     if (!text) { if (onEnd) onEnd(); return; }
@@ -190,7 +194,8 @@ export default function App() {
 
     if (isChat) maybeAutoReact(textForAPI, userIndex);
 
-    const memoryContext = isChat && notes.length > 0 ? `Foydalanuvchi haqida eslab qolgan narsalar: ${notes.join("; ")}.` : "";
+    const noteTexts = notes.map((n) => (typeof n === "string" ? n : n.text));
+    const memoryContext = isChat && noteTexts.length > 0 ? `Foydalanuvchi haqida eslab qolgan narsalar: ${noteTexts.join("; ")}.` : "";
     const system = isChat ? `${PERSONA.system}\n\n${SAFETY_RULE}\n\n${memoryContext}` : QIDIRUV_SYSTEM;
     const assistantIndex = newMessages.length;
     setThreadMessages([...newMessages, { role: "assistant", type: "text", content: "" }]);
@@ -325,7 +330,13 @@ export default function App() {
         if (file.type.startsWith("image/")) type = "image";
         else if (file.type.startsWith("video/")) type = "video";
         else if (file.type.startsWith("audio/")) type = "audiofile";
-        setMessages((prev) => [...prev, { role: "user", type, content: reader.result, fileName: file.name, fileSize: file.size }]);
+        const userMsg = { role: "user", type, content: reader.result, fileName: file.name, fileSize: file.size };
+        const canAnalyze = type === "image" || file.type === "application/pdf";
+        if (canAnalyze) {
+          runTurn("chat", userMsg, type === "image" ? "[rasm yubordi]" : "[hujjat yubordi]");
+        } else {
+          setMessages((prev) => [...prev, userMsg]);
+        }
       };
       reader.onerror = () => setErrorMsg("Faylni o'qib bo'lmadi. Boshqasini sinab ko'ring.");
       reader.readAsDataURL(file);
@@ -474,7 +485,8 @@ export default function App() {
   function addNote() {
     const t = noteInput.trim();
     if (!t) return;
-    setNotes((prev) => [...prev, t]);
+    const dateLabel = new Date().toLocaleDateString("uz-UZ", { day: "numeric", month: "long", year: "numeric" });
+    setNotes((prev) => [...prev, { text: t, date: dateLabel }]);
     setNoteInput("");
   }
 
@@ -598,13 +610,26 @@ export default function App() {
     setSearchMessages([]);
     setNotes([]);
     setFamilyMembers([]);
+    setProfileBio("");
+    setProfileBirthdate("");
+    setProfileAvatar("🙂");
     setScreen("home");
     try { window.localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   }
 
+  function timeOfDayGreeting() {
+    const h = new Date().getHours();
+    if (h >= 5 && h < 11) return "Xayrli tong";
+    if (h >= 11 && h < 17) return "Xayrli kun";
+    if (h >= 17 && h < 22) return "Xayrli kech";
+    return "Assalomu alaykum";
+  }
+
   function openChat() {
     if (messages.length === 0) {
-      setMessages([{ role: "assistant", type: "text", content: `Assalomu alaykum! Men ${PERSONA.name}man. Bugun kayfiyatingiz qanday?` }]);
+      const hello = timeOfDayGreeting();
+      const namePart = userName ? `, ${userName}` : "";
+      setMessages([{ role: "assistant", type: "text", content: `${hello}${namePart}! Men ${PERSONA.name}man. Bugun kayfiyatingiz qanday?` }]);
     }
     setScreen("chat");
   }
@@ -703,6 +728,17 @@ export default function App() {
 
             {screen === "oila" && (
               <FamilyScreen onOpenMenu={() => setMenuOpen(true)} familyMembers={familyMembers} onAdd={addFamilyMember} onRemove={removeFamilyMember} />
+            )}
+
+            {screen === "profile" && (
+              <ProfileScreen
+                onOpenMenu={() => setMenuOpen(true)}
+                userName={userName} setUserName={setUserName}
+                profileAvatar={profileAvatar} setProfileAvatar={setProfileAvatar}
+                profileBio={profileBio} setProfileBio={setProfileBio}
+                profileBirthdate={profileBirthdate} setProfileBirthdate={setProfileBirthdate}
+                onGoTheme={() => setScreen("settings")}
+              />
             )}
 
             {screen === "memory" && (

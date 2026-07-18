@@ -17,12 +17,19 @@ export function MemoryScreen({ onOpenMenu, notes, noteInput, setNoteInput, onAdd
       </div>
       <div className="amora-scroll flex-1 overflow-y-auto flex flex-col gap-2">
         {notes.length === 0 && <div className="text-sm text-center mt-10" style={{ color: "var(--muted)" }}>Hali hech narsa saqlanmagan.</div>}
-        {notes.map((n, i) => (
-          <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl text-sm" style={{ background: "var(--surface)", color: "var(--text)" }}>
-            <span>{n}</span>
-            <button onClick={() => onRemove(i)}><Trash2 size={16} color="var(--muted)" /></button>
-          </div>
-        ))}
+        {notes.map((n, i) => {
+          const text = typeof n === "string" ? n : n.text;
+          const date = typeof n === "string" ? null : n.date;
+          return (
+            <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl text-sm" style={{ background: "var(--surface)", color: "var(--text)" }}>
+              <div className="flex flex-col">
+                <span>{text}</span>
+                {date && <span className="text-[10px] mt-0.5" style={{ color: "var(--muted)" }}>{date}</span>}
+              </div>
+              <button onClick={() => onRemove(i)}><Trash2 size={16} color="var(--muted)" /></button>
+            </div>
+          );
+        })}
       </div>
       </div>
     </div>

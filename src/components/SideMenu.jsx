@@ -1,8 +1,9 @@
 import React from "react";
-import { MessageCircle, Users, Search, Brain, Settings as SettingsIcon, X } from "lucide-react";
+import { MessageCircle, Users, Search, Brain, Settings as SettingsIcon, User, X } from "lucide-react";
 
 const ITEMS = [
   { id: "chat", label: "Suhbat", icon: MessageCircle },
+  { id: "profile", label: "Profil", icon: User },
   { id: "oila", label: "Oila", icon: Users },
   { id: "qidiruv", label: "AI Qidiruv", icon: Search },
   { id: "memory", label: "Xotira", icon: Brain },
